@@ -3,7 +3,7 @@
 > Custom 5" racing quad — currently in the config + flashing phase.
 > **Status:** assembled, working on flight controller setup, ESC config, and radio binding.
 
-![Drone — front view with FC/ESC stack](images/drone_front_esc.jpg)
+![Drone — front view with FC/ESC stack](images/drone_front_esc.jpeg)
 
 ---
 
@@ -73,7 +73,7 @@
 ### Soldering the ESC + power leads
 First time soldering on a 4-in-1 ESC. Took a few attempts to get clean joints — flux is your friend.
 
-![Bottom view — ESC and power lead soldering](images/drone_back_soldering.jpg)
+![Bottom view — ESC and power lead soldering](images/drone_back_soldering.jpeg)
 
 ---
 
