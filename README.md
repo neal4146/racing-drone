@@ -3,6 +3,8 @@
 > Custom 5" racing quad — currently in the config + flashing phase.
 > **Status:** assembled, working on flight controller setup, ESC config, and radio binding.
 
+![Drone — front view with FC/ESC stack](images/drone_front_esc.jpg)
+
 ---
 
 ## ⚡ at a glance
@@ -68,13 +70,20 @@
 
 ## 📓 build notes
 
-*(dropping photos + notes here as I go)*
+### Soldering the ESC + power leads
+First time soldering on a 4-in-1 ESC. Took a few attempts to get clean joints — flux is your friend.
+
+![Bottom view — ESC and power lead soldering](images/drone_back_soldering.jpg)
 
 ---
 
 ## 💡 lessons learned
 
-*(coming as I run into things)*
+- **Soldering takes practice.** First few joints looked rough. More flux, more heat, less solder than you'd think.
+- **Plan your wire routing before you solder.** Cut wires too short the first time and had to redo a joint.
+- **Tin everything first.** Pre-tin pads + wire ends → joints come out way cleaner.
+- **Check motor wire order before final mounting.** Motor direction in Betaflight is easier to fix in software, but knowing CW/CCW up front saves headaches.
+- **LiPo safety isn't optional.** Always charge in the bag. Always.
 
 ---
 
