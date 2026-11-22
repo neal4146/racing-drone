@@ -74,11 +74,12 @@
 - [x] Motor protocol DSHOT600, 4 kHz PID loop, 14 motor poles
 - [x] Arming switch
 - [x] First flight 🎉 (unstable, see below)
-- [ ] Angle mode on, accelerometer calibrated
+- [x] Angle mode on (full range)
+- [x] Blackbox logging + first log analysis (see below)
+- [ ] Accelerometer recalibrated on a verified-level surface
 - [ ] Throttle curve + throttle limit
 - [ ] Steady hover
 - [ ] Flash Bluejay on the ESC + turn on bidirectional DShot (RPM filter)
-- [ ] Blackbox logging
 - [ ] PID tuning from blackbox logs
 
 ---
@@ -108,14 +109,16 @@ It flew! It was also really hard to control:
 - Setup tab: **calibrate the accelerometer** on a flat surface, then tilt the quad by hand and make sure the 3D model follows.
 - Center the roll and pitch trims on the Pocket. Receiver tab should read ~1500 with the sticks centered.
 
-**2. Throttle** (CLI)
+**2. Throttle + Airmode** (CLI, values updated after the log analysis below)
 ```
-set thr_mid = 30
-set thr_expo = 40
+set thr_mid = 20
+set thr_expo = 50
 set throttle_limit_type = SCALE
 set throttle_limit_percent = 80
+feature -AIRMODE
 save
 ```
+The board must reboot after `save`, or nothing was stored.
 
 **3. Bounce**
 - Turn **Airmode off** for now.
@@ -130,13 +133,40 @@ save
 
 ---
 
+## 📊 blackbox log analysis (Nov 21, 2026)
+
+The onboard 16 MB flash had recorded every flight: 28 logs. I decoded them with a small Python decoder written for this repo ([tools/](tools/)) and summarized each flight.
+
+| Finding | Evidence from the logs |
+|---|---|
+| **Logs 1–19 were flown in Acro** | ANGLE mode was active 0% of the time. Three of them ended in automatic **RUNAWAY TAKEOFF** disarms. From log 20 on, ANGLE was active 100% of the time. |
+| **One battery was over-discharged** | Logs 13–20 were all on one pack, which started log 20 at 12.4 V at rest and dropped to ~6 V under load (~1.5 V/cell). That pack is retired. The other pack sags normally (14.8 → 14.5 V at hover). |
+| **CLI throttle changes and Airmode-off never saved** | Every log header still shows `thr_mid 50`, `thr_expo 0`, throttle limit 100%, AIRMODE on. |
+| **Hover throttle is ~20%** | Steady hover at throttle stick ≈1185–1207 (out of 1000–2000), motors ≈17–21%. So `thr_mid` should be 20, not 30. |
+| **Drift right and back = accelerometer offset** | In Angle mode I had to hold roll ≈8% **left** and pitch ≈3–4% **forward** the whole hover. On the ground, the FC read roll −1.6° and pitch +0.8°. So when it holds what it thinks is "level", the quad is really leaning right and back. |
+| **Weight balance** | Left/right is even (<0.3% motor difference). Rear motors run ~2.4% higher than front, so it's slightly tail-heavy → move the battery forward a bit. |
+| **Bounce** | Low-frequency vertical bobbing at ~1–1.5 Hz (throttle over-correction with no expo around a 20% hover point), plus Airmode spinning the motors up on the ground at takeoff and landing. |
+| **Noise / vibration** | Fine. Filtered gyro RMS is under ~10 °/s in a steady hover, so filters and PIDs aren't the problem yet. |
+
+Fix: re-enter the throttle/Airmode CLI block in the fix plan above (now with `thr_mid = 20`), then recalibrate the accelerometer on a surface checked with a level, move the battery ~5–10 mm forward, erase the flash, and log a new hover to confirm.
+
+### running the analysis
+```
+pip install -r tools/requirements.txt
+python tools/analyze.py logs/                # every log in the folder
+python tools/analyze.py logs/btfl_028.bbl    # one log
+```
+`tools/bbdecode.py` is a standalone decoder for the Betaflight blackbox format (headers, I/P/S/E frames, all field encodings and predictors). It can also be imported to get the raw data as a numpy array.
+
+---
+
 ## 🗺️ roadmap
 
 PID tuning and autonomy only work on a quad that already flies cleanly, so the order matters:
 
 1. **Steady hover** in Angle mode (fixes above)
 2. **Bluejay + bidirectional DShot** → RPM filter cleans up motor noise
-3. **Blackbox logging** → real flight data
+3. **Blackbox logging** → real flight data ✅ started (see analysis above)
 4. **PID tuning** from logs (PIDtoolbox / Blackbox Explorer). This sets how hard and fast the FC corrects errors, so a good tune means less wobble, less bounce-back, cooler motors, and a solid base for the hold modes.
 5. **GPS pilot assist** on the current F722: add the M10 GPS + compass, then GPS Rescue, **altitude hold** and **position hold**. This needs ALTHOLD/POSHOLD enabled in the firmware build.
 6. **Real autonomy:** the F722 only has ~512 KB of flash, which rules out ArduPilot and PX4. The plan is to swap to an **H743 FC running ArduPilot**, which adds waypoint missions, EKF3 state estimation, MAVLink and ROS 2.
@@ -176,6 +206,9 @@ The original wiring had RP1 TX → FC TX, so the FC never saw the receiver. TX a
 - **UART TX goes to RX.** Serial lines always cross.
 - **A full chip erase wipes *everything*.** Modes, accelerometer calibration, all of it. Redo the setup checklist after flashing, not just the ports.
 - **Know what mode you're flying in.** Acro on a first flight feels like the drone has a mind of its own. Learn in Angle mode first.
+- **CLI changes only count after `save`.** If the board doesn't reboot, nothing was stored. Check with `get <setting>`.
+- **Watch pack voltage.** Land at ~14.0 V (3.5 V/cell). Flying a pack down to ~1.5 V/cell ruins it.
+- **The logs know more than you do.** "Drifts right" turned out to be a ~1.6° accelerometer offset, visible as constant left-stick correction in the blackbox.
 - **Fly well before tuning, tune before automating.** PIDs and autonomy can't fix a setup problem or a lack of stick time.
 
 ---
